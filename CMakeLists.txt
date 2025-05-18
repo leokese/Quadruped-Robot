@@ -29,7 +29,7 @@ target_link_libraries(${PROJECT_NAME} pinocchio::pinocchio)
 target_link_libraries(${PROJECT_NAME} aligator::aligator)
 target_link_libraries(${PROJECT_NAME} proxsuite-nlp)
 
-add_custom_command(
-        TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/result_visual.py
-)
+# add_custom_command(
+#         TARGET ${PROJECT_NAME} POST_BUILD
+#     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/result_visual.py
+# )

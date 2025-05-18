@@ -48,7 +48,7 @@ StageModel MPCSolver::createStage(int k)
     }
 
     ZmpResidualCost zmp_residual(space, nu, contact_feet_id, mpc_settings.w_zmp);
-    CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-4);
+    CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
     cost.addCost("zmp_residual_cost", zmp_fini_diff);
 
     FramePlacementResidual frame_res(space.ndx(), nu, model, arm_contact_places[k], contact_ids[4]);
@@ -71,9 +71,9 @@ StageModel MPCSolver::createStage(int k)
             CentroidalFrictionConeResidual friction_residual(space.ndx(), nu, i, mpc_settings.mu, 1e-5);
             stage_model.addConstraint(friction_residual, NegativeOrthant()); 
             
-            // 添加高度约束
-            JointCoordinateResidual height_residual(space.ndx(), nu, model, contact_ids[i], 2);
-            stage_model.addConstraint(height_residual, EqualityConstraint());
+            // // 添加高度约束
+            // JointCoordinateResidual height_residual(space.ndx(), nu, model, contact_ids[i], 2);
+            // stage_model.addConstraint(height_residual, EqualityConstraint());
 
         }
     }

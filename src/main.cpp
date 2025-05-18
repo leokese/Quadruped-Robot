@@ -29,7 +29,7 @@ void saveVectorsToCsv(const std::string &filename, const std::vector<Eigen::Vect
 int main(int argc, char const *argv[])
 {
     ////////////////////////// 生成模型 //////////////////////////////
-    std::string urdf_path = "/home/robot/文档/vs_project/quadruped_mpc_8/robot/galileo_mini_x5_description/galileo_mini_x5.urdf";
+    std::string urdf_path = "/home/zishang/cpp_workspace/Quadruped-Robot/robot/galileo_mini_x5_description/galileo_mini_x5.urdf";
     // std::string urdf_path = "/home/robot/文档/vs_project/quadruped_mpc_5/robot/galileo_mini/robot.urdf";
     Model model;
     pinocchio::urdf::buildModel(urdf_path, model);
@@ -196,8 +196,8 @@ int main(int argc, char const *argv[])
     }
 
                 
-    saveVectorsToCsv("/home/robot/文档/vs_project/quadruped_mpc_8/solo_kinodynamics_result_xs.csv", xs);
-    saveVectorsToCsv("/home/robot/文档/vs_project/quadruped_mpc_8/solo_kinodynamics_result_us.csv", us_selected);
+    saveVectorsToCsv("solo_kinodynamics_result_xs.csv", xs);
+    saveVectorsToCsv("solo_kinodynamics_result_us.csv", us_selected);
 
     return 0;
 }
