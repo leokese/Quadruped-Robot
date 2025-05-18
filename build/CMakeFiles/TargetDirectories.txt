@@ -1,3 +1,0 @@
-/home/robot/文档/vs_project/quadruped_mpc_8/build/CMakeFiles/QUADRUPED_MPC.dir
-/home/robot/文档/vs_project/quadruped_mpc_8/build/CMakeFiles/edit_cache.dir
-/home/robot/文档/vs_project/quadruped_mpc_8/build/CMakeFiles/rebuild_cache.dir
