@@ -2,20 +2,17 @@
 
 MPCSolver::MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, VectorXd x0_, VectorXd u0_,
                      std::vector<FrameIndex> contact_ids_,
-                     std::vector<FrameIndex> else_ids_,
                      std::vector<SE3> arm_contact_place_,
                      std::vector<std::vector<Vector3d>> &contact_poses_,
                      std::vector<std::vector<bool>> &contact_states_,
-                     double mass_, Vector3d arm_force_, double z_ref_, const YamlLoader &yaml_loader_)
+                     const YamlLoader &yaml_loader_)
     : space(space_),
       nsteps(nsteps_),
       nu(nu_), x0(x0_), u0(u0_),
       contact_ids(contact_ids_),
-      else_ids(else_ids_),
       arm_contact_places(arm_contact_place_),
       contact_poses(contact_poses_),
-      contact_states(contact_states_),
-      mass(mass_), arm_force(arm_force_), z_ref(z_ref_)
+      contact_states(contact_states_)
 {
     initCostWeight(yaml_loader_);
 }

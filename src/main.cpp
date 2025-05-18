@@ -167,8 +167,8 @@ int main(int argc, char const *argv[])
 
     double z_ref = 0.48; // 机械臂末端高度(目前没用)
 
-    MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids, else_ids,
-                         arm_contact_places, contact_poses, contact_states, mass, f_pull, z_ref, yaml_loader);
+    MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids,
+                         arm_contact_places, contact_poses, contact_states, yaml_loader);
 
     auto result = mpc_solver.solve();
     auto xs = result.first;

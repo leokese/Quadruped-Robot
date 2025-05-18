@@ -36,14 +36,10 @@ private:
     std::vector<std::vector<Vector3d>> &contact_poses;
     std::vector<std::vector<bool>> &contact_states;
     std::vector<FrameIndex> contact_ids;
-    std::vector<FrameIndex> else_ids;
     VectorXd x0;
     VectorXd u0;
     int nu;
     int nsteps;
-    double mass;
-    Vector3d arm_force;
-    double z_ref; // 机械臂末端高度
 
     void initCostWeight(const YamlLoader &yaml_loader);
     StageModel createStage(int k);
@@ -51,11 +47,10 @@ private:
 public:
     MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, VectorXd x0_, VectorXd u0_,
               std::vector<FrameIndex> contact_ids_,
-              std::vector<FrameIndex> else_ids_,
               std::vector<SE3> arm_contact_place_,
               std::vector<std::vector<Vector3d>> &contact_poses_,
               std::vector<std::vector<bool>> &contact_states_,
-              double mass_, Vector3d arm_force_, double z_ref_, const YamlLoader &yaml_loader_);
+              const YamlLoader &yaml_loader_);
 
     std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve();
 };
