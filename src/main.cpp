@@ -173,8 +173,8 @@ int main(int argc, char const *argv[])
 
     MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids,
                          arm_contact_poses, feet_contact_poses, contact_states, yaml_loader);
-
-    auto result = mpc_solver.solve();
+          
+    auto result = mpc_solver.solve(x0);
     auto xs = result.first;
     auto us = result.second;
 

@@ -40,9 +40,11 @@ private:
     VectorXd u0;
     int nu;
     int nsteps;
+    std::unique_ptr<TrajOptProblem> problem_;
 
     void initCostWeight(const YamlLoader &yaml_loader);
     StageModel createStage(int k);
+    void createProblem(const VectorXd &x0, const VectorXd &x_ref_term);
 
 public:
     MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, VectorXd x0_, VectorXd u0_,
@@ -52,5 +54,5 @@ public:
               std::vector<std::vector<bool>> &contact_states_,
               const YamlLoader &yaml_loader_);
 
-    std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve();
+    std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve(const VectorXd &x0);
 };

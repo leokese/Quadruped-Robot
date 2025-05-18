@@ -15,6 +15,7 @@ MPCSolver::MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, Ve
       contact_states(contact_states_)
 {
     initCostWeight(yaml_loader_);
+    createProblem(x0, x0);
 }
 
 StageModel MPCSolver::createStage(int k)
@@ -80,13 +81,10 @@ StageModel MPCSolver::createStage(int k)
     return stage_model;
 }
 
-std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve()
+void MPCSolver::createProblem(const VectorXd &x0, const VectorXd &x_ref_term)
 {
-    const Model &model = space.getModel();
-
     CostStack term_cost(space, nu);
-    // term_cost.addCost(QuadraticStateCost(space, nu, x0, 10 * mpc_settings.w_x));
-    term_cost.addCost(QuadraticStateCost(space, nu, x0, 0 * mpc_settings_.w_x));
+    term_cost.addCost(QuadraticStateCost(space, nu, x_ref_term, 0 * mpc_settings_.w_x));
 
     std::vector<xyz::polymorphic<StageModel>> stages;
     for (size_t i = 0; i < nsteps; i++)
@@ -94,7 +92,11 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve()
         stages.push_back(createStage(i));
     }
 
-    TrajOptProblem problem(x0, stages, term_cost);
+    problem_ = std::make_unique<TrajOptProblem>(x0, stages, term_cost);
+}
+
+std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const VectorXd &x0)
+{
 
     // double TOL = 1e-4;
     double TOL = 1e-3;
@@ -108,12 +110,12 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve()
     solver.force_initial_condition_ = true;
     solver.filter_.beta_ = 1e-5;
     solver.setNumThreads(4);
-    solver.setup(problem);
+    solver.setup(*problem_);
 
     std::vector<VectorXd> xs_init(nsteps + 1, x0);
     std::vector<VectorXd> us_init(nsteps, u0);
 
-    solver.run(problem, xs_init, us_init);
+    solver.run(*problem_, xs_init, us_init);
 
     std::vector<VectorXd> xs = solver.results_.xs;
     std::vector<VectorXd> us = solver.results_.us;
