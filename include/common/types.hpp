@@ -22,6 +22,7 @@
 #include <aligator/modelling/multibody/frame-velocity.hpp>
 #include <proxsuite-nlp/modelling/constraints/negative-orthant.hpp>
 #include <proxsuite-nlp/modelling/constraints/equality-constraint.hpp>
+#include <aligator/modelling/function-xpr-slice.hpp>
 
 #include "joint_coordinate_residual.hpp"
 
@@ -55,3 +56,4 @@ using BoxConstraint = proxsuite::nlp::BoxConstraintTpl<double>;
 using FlyHighResidual = aligator::FlyHighResidualTpl<double>;
 using CostFiniteDifference = aligator::autodiff::CostFiniteDifferenceHelper<double>;
 using FrameVelocityResidual = aligator::FrameVelocityResidualTpl<double>;
+using FunctionSliceXpr = aligator::FunctionSliceXprTpl<double>;

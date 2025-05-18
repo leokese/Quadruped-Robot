@@ -4,19 +4,21 @@
 #include "joint_coordinate_residual.hpp"
 #include "zmp_residual_cost.hpp"
 #include "joint_coordinate_residual.hpp"
+#include "yaml_loader.hpp"
 
 using Motion = pinocchio::MotionTpl<double>;
 using JointCoordinateResidual = aligator::JointCoordinateResidualTpl<double>;
 
 struct MPCSettings
 {
-    MatrixXd w_x;        // 状态权重
-    MatrixXd w_u;        // 输入权重
-    MatrixXd w_foot;     // 腿的平移权重
-    MatrixXd w_cent_mom; // 角动量导数权重
-    MatrixXd w_arm;      // 机械臂末端位姿权重
-    MatrixXd w_joint_diff; // 机械臂关节差值权重
-    MatrixXd w_fly;      // fly_high目标权重
+    MatrixXd w_x;          // 状态权重
+    MatrixXd w_u;          // 输入权重
+    MatrixXd w_foot;       // 腿的平移权重
+    MatrixXd w_cent_mom;   // 角动量导数权重
+    MatrixXd w_arm_pos;    // 机械臂末端位姿权重
+    MatrixXd w_arm_vel;    // 机械臂末端速度权重
+    MatrixXd w_fly_high;   // fly_high目标权重
+    double fly_high_slope; // fly_high斜率
     double w_zmp;
 
     double dt = 20e-3;                        // Timestep
@@ -28,11 +30,11 @@ struct MPCSettings
 class MPCSolver
 {
 private:
-    MPCSettings mpc_settings;
+    MPCSettings mpc_settings_;
     const MultibodyPhaseSpace &space;
     std::vector<SE3> arm_contact_places;
-    std::vector<std::vector<Vector3d>>& contact_poses;
-    std::vector<std::vector<bool>>& contact_states;
+    std::vector<std::vector<Vector3d>> &contact_poses;
+    std::vector<std::vector<bool>> &contact_states;
     std::vector<FrameIndex> contact_ids;
     std::vector<FrameIndex> else_ids;
     VectorXd x0;
@@ -42,19 +44,18 @@ private:
     double mass;
     Vector3d arm_force;
     double z_ref; // 机械臂末端高度
-    double slope;
 
+    void initCostWeight(const YamlLoader &yaml_loader);
     StageModel createStage(int k);
 
 public:
     MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, VectorXd x0_, VectorXd u0_,
-        std::vector<FrameIndex> contact_ids_,
-        std::vector<FrameIndex> else_ids_,
-        std::vector<SE3> arm_contact_place_,
-        std::vector<std::vector<Vector3d>> &contact_poses_,
-        std::vector<std::vector<bool>> &contact_states_,
-        double mass_, Vector3d arm_force_, double z_ref_, double slope_);
-    
-    std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve();
+              std::vector<FrameIndex> contact_ids_,
+              std::vector<FrameIndex> else_ids_,
+              std::vector<SE3> arm_contact_place_,
+              std::vector<std::vector<Vector3d>> &contact_poses_,
+              std::vector<std::vector<bool>> &contact_states_,
+              double mass_, Vector3d arm_force_, double z_ref_, const YamlLoader &yaml_loader_);
 
+    std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve();
 };

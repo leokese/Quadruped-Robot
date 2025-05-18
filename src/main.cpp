@@ -3,7 +3,6 @@
 #include "arm_schedule.hpp"
 #include "mpc_solver.hpp"
 
-
 void saveVectorsToCsv(const std::string &filename, const std::vector<Eigen::VectorXd> &vectors)
 {
     std::ofstream file(filename);
@@ -30,6 +29,7 @@ int main(int argc, char const *argv[])
 {
     ////////////////////////// 生成模型 //////////////////////////////
     std::string urdf_path = "/home/zishang/cpp_workspace/Quadruped-Robot/robot/galileo_mini_x5_description/galileo_mini_x5.urdf";
+    std::string yaml_path = "/home/zishang/cpp_workspace/Quadruped-Robot/config/parameters.yaml";
     // std::string urdf_path = "/home/robot/文档/vs_project/quadruped_mpc_5/robot/galileo_mini/robot.urdf";
     Model model;
     pinocchio::urdf::buildModel(urdf_path, model);
@@ -40,9 +40,9 @@ int main(int argc, char const *argv[])
     const int force_size = mpc_settings.force_size;
     const int nc = 5;                        // contact number
     const int nu = nv - 6 + nc * force_size; // input number
-    MultibodyPhaseSpace space(model);  
-
+    MultibodyPhaseSpace space(model);
     const int ndx = space.ndx();
+    YamlLoader yaml_loader(yaml_path);
 
     ////////////////////////// 生成初始状态 //////////////////////////////
     VectorXd q0(model.nq);
@@ -58,12 +58,12 @@ int main(int argc, char const *argv[])
         0, 0.72, -1.44,
         0, 0.72, -1.44,
         0, 0.72, -1.44;
-    q_arm << 0, M_PI*3/4, M_PI*1/2, M_PI/4, 0, 0;
+    q_arm << 0, M_PI * 3 / 4, M_PI * 1 / 2, M_PI / 4, 0, 0;
     q0 << q_base_leg, q_arm;
 
     VectorXd x0(nq + nv);
     x0 << q0, VectorXd::Zero(nv);
-    //VectorXd u0 = VectorXd::Zero(nu);
+    // VectorXd u0 = VectorXd::Zero(nu);
     VectorXd u0(nu);
     double mass = pinocchio::computeTotalMass(model);
     Vector3d f_ref(0, 0, -mass * mpc_settings.gravity[2] / 4.0);
@@ -73,7 +73,7 @@ int main(int argc, char const *argv[])
         u0.segment(i * mpc_settings.force_size, mpc_settings.force_size) = f_ref;
     }
     u0.segment(4 * mpc_settings.force_size, 3) = f_pull;
-    u0.segment(5 *  mpc_settings.force_size, model.nv - 6).setZero();
+    u0.segment(5 * mpc_settings.force_size, model.nv - 6).setZero();
 
     Vector3d com0 = pinocchio::centerOfMass(model, data, x0.head(nq));
 
@@ -88,7 +88,7 @@ int main(int argc, char const *argv[])
     const FrameIndex link4_id = model.getFrameId("HR_hip_link", pinocchio::BODY);
 
     // std::cout << "FL_foot_link Frame Index: " << FL_id << std::endl;
-    // std::cout << "FR_foot_link Frame Index: " << FR_id << std::endl;        
+    // std::cout << "FR_foot_link Frame Index: " << FR_id << std::endl;
     // std::cout << "HL_foot_link Frame Index: " << HL_id << std::endl;
     // std::cout << "HR_foot_link Frame Index: " << HR_id << std::endl;
     // std::cout << "link8 Frame Index: " << arm_id << std::endl;
@@ -96,18 +96,16 @@ int main(int argc, char const *argv[])
     std::vector<FrameIndex> contact_ids = {FL_id, FR_id, HL_id, HR_id, arm_id};
     std::vector<FrameIndex> else_ids = {link1_id, link2_id, link3_id, link4_id};
 
-
     pinocchio::forwardKinematics(model, data, q0);
     pinocchio::updateFramePlacements(model, data);
 
- 
     SE3 FL_pose = data.oMf[FL_id];
     SE3 FR_pose = data.oMf[FR_id];
     SE3 HL_pose = data.oMf[HL_id];
     SE3 HR_pose = data.oMf[HR_id];
 
     std::vector<Vector3d> init_foot_pos = {FL_pose.translation(), FR_pose.translation(),
-                                              HL_pose.translation(), HR_pose.translation()};
+                                           HL_pose.translation(), HR_pose.translation()};
 
     SE3 init_arm_place = data.oMf[arm_id];
 
@@ -119,12 +117,12 @@ int main(int argc, char const *argv[])
 
     const int n_qs = 5;  // 离散时刻的全接触支持数量
     const int n_ds = 40; // 离散时刻的双足接触支持数量
-    const int steps = 3; // 生成多少组步态
+    const int steps = 2; // 生成多少组步态
 
     double swing_apex = 0.05; // 抬腿高度
-    //double swing_apex = 0.0; // 抬腿高度
-    double x_forward = -0.2;   // 前进距离
-    //double x_forward = 0.0;   // 前进距离
+    // double swing_apex = 0.0; // 抬腿高度
+    double x_forward = -0.2; // 前进距离
+    // double x_forward = 0.0;   // 前进距离
 
     // 最终生成 steps*(2*n_qs + 2*n_ds) 个离散时刻的足端接触状态与位姿
     Gait gait = Gait(steps, n_qs, n_ds, init_foot_pos, swing_apex, x_forward);
@@ -137,8 +135,7 @@ int main(int argc, char const *argv[])
     std::vector<SE3> arm_contact_places;
 
     Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();
-    Eigen::Vector3d translation(init_arm_pos[0]-0.6, init_arm_pos[1], init_arm_pos[2]);
-
+    Eigen::Vector3d translation(init_arm_pos[0] - 0.6, init_arm_pos[1], init_arm_pos[2]);
 
     SE3 end_arm_place(rotation, translation);
 
@@ -149,7 +146,6 @@ int main(int argc, char const *argv[])
 
     Arm arm(nsteps, init_arm_place, end_arm_place);
     arm_contact_places = arm.generateArmTrajectory();
-
 
     // 生成总的接触状态与位姿
     std::vector<std::vector<bool>> contact_states;
@@ -167,13 +163,12 @@ int main(int argc, char const *argv[])
         // 转换为 std::vector<bool> 并插入
         std::vector<bool> combined_vec(combined.begin(), combined.end());
         contact_states.push_back(combined_vec);
-    }   
+    }
 
     double z_ref = 0.48; // 机械臂末端高度(目前没用)
-    double slope = 0.9;
 
-    MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids, else_ids, 
-                arm_contact_places, contact_poses, contact_states, mass, f_pull, z_ref, slope);
+    MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids, else_ids,
+                         arm_contact_places, contact_poses, contact_states, mass, f_pull, z_ref, yaml_loader);
 
     auto result = mpc_solver.solve();
     auto xs = result.first;
@@ -181,7 +176,7 @@ int main(int argc, char const *argv[])
 
     std::vector<VectorXd> us_selected;
 
-    for (const auto& u : us)
+    for (const auto &u : us)
     {
         // 检查维度是否足够
         if (u.size() >= 15)
@@ -195,7 +190,6 @@ int main(int argc, char const *argv[])
         }
     }
 
-                
     saveVectorsToCsv("solo_kinodynamics_result_xs.csv", xs);
     saveVectorsToCsv("solo_kinodynamics_result_us.csv", us_selected);
 

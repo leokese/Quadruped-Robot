@@ -6,6 +6,7 @@ find_package(aligator REQUIRED)
 find_package(proxsuite-nlp REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Python3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # 获取 C++ 源文件
 file(GLOB_RECURSE SRC_LIST 
@@ -28,6 +29,7 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} pinocchio::pinocchio)
 target_link_libraries(${PROJECT_NAME} aligator::aligator)
 target_link_libraries(${PROJECT_NAME} proxsuite-nlp)
+target_link_libraries(${PROJECT_NAME} yaml-cpp::yaml-cpp)
 
 # add_custom_command(
 #         TARGET ${PROJECT_NAME} POST_BUILD
