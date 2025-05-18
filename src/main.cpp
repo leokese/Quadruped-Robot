@@ -25,6 +25,17 @@ void saveVectorsToCsv(const std::string &filename, const std::vector<Eigen::Vect
     std::cout << "Results saved to " << filename << std::endl;
 }
 
+std::vector<SE3> generateSE3Trajectory(const SE3 &init_pose, const SE3 &final_pose, int nsteps)
+{
+    std::vector<SE3> poses;
+    for (int i = 0; i < nsteps; ++i)
+    {
+        double alpha = static_cast<double>(i) / (nsteps - 1); // 插值因子
+        poses.push_back(pinocchio::SE3::Interpolate(init_pose, final_pose, alpha));
+    }
+    return poses;
+}
+
 int main(int argc, char const *argv[])
 {
     ////////////////////////// 生成模型 //////////////////////////////
@@ -86,6 +97,7 @@ int main(int argc, char const *argv[])
     const FrameIndex link2_id = model.getFrameId("FR_hip_link", pinocchio::BODY);
     const FrameIndex link3_id = model.getFrameId("HL_hip_link", pinocchio::BODY);
     const FrameIndex link4_id = model.getFrameId("HR_hip_link", pinocchio::BODY);
+    const FrameIndex body_id = model.getFrameId("base_link", pinocchio::BODY);
 
     // std::cout << "FL_foot_link Frame Index: " << FL_id << std::endl;
     // std::cout << "FR_foot_link Frame Index: " << FR_id << std::endl;
@@ -107,12 +119,10 @@ int main(int argc, char const *argv[])
     std::vector<Vector3d> init_foot_pos = {FL_pose.translation(), FR_pose.translation(),
                                            HL_pose.translation(), HR_pose.translation()};
 
-    SE3 init_arm_place = data.oMf[arm_id];
+    SE3 init_arm_pose = data.oMf[arm_id];
 
-    Vector3d init_arm_pos = init_arm_place.translation();
-
-    ////////////////////////// 添加生成接触状态与位姿 //////////////////////////////
-    std::vector<std::vector<Vector3d>> contact_poses;
+    ////////////////////////// 生成腿部接触状态与位姿 //////////////////////////////
+    std::vector<std::vector<Vector3d>> feet_contact_poses;
     std::vector<std::vector<bool>> feet_contact_states;
 
     const int n_qs = 5;  // 离散时刻的全接触支持数量
@@ -128,26 +138,21 @@ int main(int argc, char const *argv[])
     Gait gait = Gait(steps, n_qs, n_ds, init_foot_pos, swing_apex, x_forward);
     int nsteps = gait.nsteps; // 离散时刻的数量
     feet_contact_states = gait.generateFootStates();
-    contact_poses = gait.generateFootTrajectory();
+    feet_contact_poses = gait.generateFootTrajectory();
 
-    // 生成机械臂末端的接触状态与位姿
+    ////////////////////////// 生成机械臂末端接触状态与位姿 //////////////////////////////
     std::vector<std::vector<bool>> arm_contact_states;
-    std::vector<SE3> arm_contact_places;
-
-    Eigen::Matrix3d rotation = Eigen::Matrix3d::Identity();
-    Eigen::Vector3d translation(init_arm_pos[0] - 0.6, init_arm_pos[1], init_arm_pos[2]);
-
-    SE3 end_arm_place(rotation, translation);
+    std::vector<SE3> arm_contact_poses;
+    SE3 final_arm_pose = SE3(init_arm_pose.rotation(),
+                             init_arm_pose.translation() + Vector3d(-0.6, 0, 0));
+    arm_contact_poses = generateSE3Trajectory(init_arm_pose, final_arm_pose, nsteps);
 
     for (size_t i = 0; i < feet_contact_states.size(); ++i)
     {
         arm_contact_states.push_back({true});
     }
 
-    Arm arm(nsteps, init_arm_place, end_arm_place);
-    arm_contact_places = arm.generateArmTrajectory();
-
-    // 生成总的接触状态与位姿
+    ////////////////////////// 生成总的接触状态 //////////////////////////////
     std::vector<std::vector<bool>> contact_states;
     for (size_t i = 0; i < feet_contact_states.size(); ++i)
     {
@@ -165,10 +170,9 @@ int main(int argc, char const *argv[])
         contact_states.push_back(combined_vec);
     }
 
-    double z_ref = 0.48; // 机械臂末端高度(目前没用)
 
     MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids,
-                         arm_contact_places, contact_poses, contact_states, yaml_loader);
+                         arm_contact_poses, feet_contact_poses, contact_states, yaml_loader);
 
     auto result = mpc_solver.solve();
     auto xs = result.first;
