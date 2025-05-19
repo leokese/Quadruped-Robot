@@ -47,6 +47,10 @@ StageModel MPCSolver::createStage(int k)
     // ZmpResidualCost zmp_residual(space_, nu_, contact_id_, contact_states_[k], mpc_settings_.force_size, mpc_settings_.w_zmp);
     // CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
     // cost.addCost("zmp_residual_cost", zmp_fini_diff);
+    ZmpResidual zmp_residual(space_.ndx(), nu_, model, contact_id_, contact_states_[k], mpc_settings_.force_size);
+    QuadraticResidualCost zmp_cost(space_, zmp_residual, mpc_settings_.w_zmp);
+    CostFiniteDifference zmp_residual_cost_fini_diff(zmp_cost, 1e-6);
+    cost.addCost(zmp_residual_cost_fini_diff);
 
     KinodynamicsFwdDynamics ode(space_, model, mpc_settings_.gravity, contact_states_[k], contact_id_, mpc_settings_.force_size);
     IntegratorEuler dyn_model(ode, mpc_settings_.dt);

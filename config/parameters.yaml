@@ -17,7 +17,7 @@ w_fly_high: [20, 20]
 fly_high_slope: 40.0
 
 # ZMP Cost
-w_zmp: [0, 0]
+w_zmp: [100, 100]
 
 # Arm EE Cost
 w_arm_pos: [100, 100, 100, 50, 50, 50]
