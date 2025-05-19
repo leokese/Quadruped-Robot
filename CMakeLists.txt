@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.0)
-project(QUADRUPED_MPC)  # 可以根据实际项目名修改
+project(QUADRUPED_MPC) # 可以根据实际项目名修改
 
 find_package(pinocchio REQUIRED)
 find_package(aligator REQUIRED)
@@ -9,9 +9,9 @@ find_package(Python3 REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 # 获取 C++ 源文件
-file(GLOB_RECURSE SRC_LIST 
+file(GLOB_RECURSE SRC_LIST
     ./src/*.cpp
-    ./include/*.txx  
+    ./include/*.txx
     ./include/*.hxx
 )
 
@@ -35,3 +35,11 @@ target_link_libraries(${PROJECT_NAME} yaml-cpp::yaml-cpp)
 #         TARGET ${PROJECT_NAME} POST_BUILD
 #     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/result_visual.py
 # )
+
+add_executable(zmp_residual_test
+    test/zmp_residual_test.cpp
+    src/zmp_residual.cpp
+)
+target_link_libraries(zmp_residual_test
+    pinocchio::pinocchio
+    aligator::aligator)

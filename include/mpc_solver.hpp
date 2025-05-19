@@ -5,6 +5,7 @@
 #include "zmp_residual_cost.hpp"
 #include "joint_coordinate_residual.hpp"
 #include "yaml_loader.hpp"
+#include "zmp_residual.hpp"
 
 using Motion = pinocchio::MotionTpl<double>;
 using JointCoordinateResidual = aligator::JointCoordinateResidualTpl<double>;

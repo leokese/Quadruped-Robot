@@ -6,7 +6,9 @@ ZmpResidualCost::ZmpResidualCost(MultibodyPhaseSpace space, int nu,
                                  int force_size,
                                  MatrixXd weight)
     : CostAbstract(space, nu), space_(space),
-      contact_frame_id_(contact_frame_id), weight_(weight), force_size_(force_size) {}
+      contact_frame_id_(contact_frame_id),
+      contact_state_(contact_state),
+      weight_(weight), force_size_(force_size) {}
 
 void ZmpResidualCost::evaluate(const ConstVectorRef &x, const ConstVectorRef &u,
                                CostData &data) const
