@@ -29,6 +29,8 @@ struct YamlLoader
     Eigen::VectorXd w_arm_pos;
     Eigen::VectorXd w_arm_vel;
 
+    Eigen::VectorXd w_foot_pos;
+
     YamlLoader(const std::string &file_path)
     {
         try
@@ -55,6 +57,8 @@ struct YamlLoader
 
             w_arm_pos = loadVector("w_arm_pos");
             w_arm_vel = loadVector("w_arm_vel");
+
+            w_foot_pos = loadVector("w_foot_pos");
         }
         catch (const YAML::Exception &e)
         {

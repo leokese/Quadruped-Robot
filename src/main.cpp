@@ -78,7 +78,7 @@ int main(int argc, char const *argv[])
     VectorXd u0(nu);
     double mass = pinocchio::computeTotalMass(model);
     Vector3d f_ref(0, 0, -mass * mpc_settings.gravity[2] / 4.0);
-    Vector3d f_pull(50, 0, 0);
+    Vector3d f_pull(0, 0, 0);
     for (int i = 0; i < 4; ++i)
     {
         u0.segment(i * mpc_settings.force_size, mpc_settings.force_size) = f_ref;
@@ -182,7 +182,6 @@ int main(int argc, char const *argv[])
     {
         x_ref[i].head(3) = body_pose[i].translation();
         x_ref[i].segment(3, 4) = Eigen::Quaterniond(body_pose[i].rotation()).coeffs();
-        std::cout << "x_ref[" << i << "] = " << x_ref[i].transpose() << std::endl;
     }
     std::vector<VectorXd> u_ref(nsteps, u0);
 

@@ -38,8 +38,10 @@ StageModel MPCSolver::createStage(int k)
     {
         if (!contact_states_[k][i]) // 只考虑摆动腿轨迹跟踪
         {
-            FlyHighResidual fly_res(space_.ndx(), model, contact_id_[i], mpc_settings_.fly_high_slope, nu_);
-            cost.addCost(QuadraticResidualCost(space_, fly_res, mpc_settings_.w_fly_high));
+            // FlyHighResidual fly_res(space_.ndx(), model, contact_id_[i], mpc_settings_.fly_high_slope, nu_);
+            // cost.addCost(QuadraticResidualCost(space_, fly_res, mpc_settings_.w_fly_high));
+            FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
+            cost.addCost(QuadraticResidualCost(space_, frame_res, mpc_settings_.w_foot_pos));
         }
     }
 
@@ -52,10 +54,10 @@ StageModel MPCSolver::createStage(int k)
         }
     }
 
-    // todo: 改成只有当接触状态由摆动腿变为支撑腿时才出现
-    ZmpResidualCost zmp_residual(space_, nu_, contact_feet_id, mpc_settings_.w_zmp);
-    CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
-    cost.addCost("zmp_residual_cost", zmp_fini_diff);
+    // // todo: 改成只有当接触状态由摆动腿变为支撑腿时才出现
+    // ZmpResidualCost zmp_residual(space_, nu_, contact_feet_id, mpc_settings_.w_zmp);
+    // CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
+    // cost.addCost("zmp_residual_cost", zmp_fini_diff);
 
     FramePlacementResidual arm_ee_pos(space_.ndx(), nu_, model, arm_contact_poses_[k], contact_id_[4]);
     cost.addCost(QuadraticResidualCost(space_, arm_ee_pos, mpc_settings_.w_arm_pos));
@@ -68,20 +70,23 @@ StageModel MPCSolver::createStage(int k)
     {
         if (contact_states_[k][i])
         {
-            // 添加速度约束
-            Motion zero_velocity = Motion::Zero();
-            FrameVelocityResidual vel_residual(space_.ndx(), nu_, model, zero_velocity, contact_id_[i], pinocchio::LOCAL);
-            stage_model.addConstraint(vel_residual, EqualityConstraint());
+            // // 添加速度约束
+            // Motion zero_velocity = Motion::Zero();
+            // FrameVelocityResidual vel_residual(space_.ndx(), nu_, model, zero_velocity, contact_id_[i], pinocchio::LOCAL);
+            // stage_model.addConstraint(vel_residual, EqualityConstraint());
 
             // 添加接触力约束
             CentroidalFrictionConeResidual friction_residual(space_.ndx(), nu_, i, mpc_settings_.mu, 1e-5);
             stage_model.addConstraint(friction_residual, NegativeOrthant());
 
-            // 添加高度约束
-            std::vector<int> height_id = {2};
-            FrameTranslationResidual foot_trans_res(space_.ndx(), nu_, model, Vector3d::Zero(), contact_id_[i]);
-            FunctionSliceXpr height_res = FunctionSliceXpr(foot_trans_res, height_id);
-            stage_model.addConstraint(height_res, EqualityConstraint());
+            // // 添加高度约束
+            // std::vector<int> height_id = {2};
+            // FrameTranslationResidual foot_trans_res(space_.ndx(), nu_, model, Vector3d::Zero(), contact_id_[i]);
+            // FunctionSliceXpr height_res = FunctionSliceXpr(foot_trans_res, height_id);
+            // stage_model.addConstraint(height_res, EqualityConstraint());
+
+            FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
+            stage_model.addConstraint(frame_res, EqualityConstraint());
         }
     }
 
@@ -91,7 +96,7 @@ StageModel MPCSolver::createStage(int k)
 void MPCSolver::createProblem(const VectorXd &x0, const VectorXd &x_ref_term)
 {
     CostStack term_cost(space_, nu_);
-    term_cost.addCost(QuadraticStateCost(space_, nu_, x_ref_term, 0 * mpc_settings_.w_x));
+    term_cost.addCost(QuadraticStateCost(space_, nu_, x_ref_term, 10 * mpc_settings_.w_x));
 
     std::vector<xyz::polymorphic<StageModel>> stages;
     for (size_t i = 0; i < nsteps_; i++)
@@ -105,11 +110,9 @@ void MPCSolver::createProblem(const VectorXd &x0, const VectorXd &x_ref_term)
 std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const VectorXd &x0)
 {
 
-    // double TOL = 1e-4;
-    double TOL = 1e-3;
-    // double mu_init = 1e-8;
-    double mu_init = 1e-5;
-    size_t max_iters = 1000;
+    double TOL = 1e-5;
+    double mu_init = 1e-8;
+    size_t max_iters = 100;
 
     SolverProxDDP solver(TOL, mu_init, max_iters, proxsuite::nlp::VERBOSE);
     solver.rollout_type_ = aligator::RolloutType::LINEAR;
@@ -160,4 +163,7 @@ void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
     // Arm EE Cost
     mpc_settings_.w_arm_pos = yaml_loader.w_arm_pos.asDiagonal();
     mpc_settings_.w_arm_vel = yaml_loader.w_arm_vel.asDiagonal();
+
+    // Foot pos Cost
+    mpc_settings_.w_foot_pos = yaml_loader.w_foot_pos.asDiagonal();
 }

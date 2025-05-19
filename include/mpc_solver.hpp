@@ -13,7 +13,7 @@ struct MPCSettings
 {
     MatrixXd w_x;          // 状态权重
     MatrixXd w_u;          // 输入权重
-    MatrixXd w_foot;       // 腿的平移权重
+    MatrixXd w_foot_pos;       // 腿的平移权重
     MatrixXd w_cent_mom;   // 角动量导数权重
     MatrixXd w_arm_pos;    // 机械臂末端位姿权重
     MatrixXd w_arm_vel;    // 机械臂末端速度权重
