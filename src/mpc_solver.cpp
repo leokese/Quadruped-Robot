@@ -44,8 +44,7 @@ StageModel MPCSolver::createStage(int k)
         }
     }
 
-    // // todo: 改成只有当接触状态由摆动腿变为支撑腿时才出现
-    // ZmpResidualCost zmp_residual(space_, nu_, contact_feet_id, mpc_settings_.w_zmp);
+    // ZmpResidualCost zmp_residual(space_, nu_, contact_id_, contact_states_[k], mpc_settings_.force_size, mpc_settings_.w_zmp);
     // CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
     // cost.addCost("zmp_residual_cost", zmp_fini_diff);
 
@@ -149,7 +148,7 @@ void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
     mpc_settings_.fly_high_slope = yaml_loader.fly_high_slope;
 
     // ZMP Cost
-    mpc_settings_.w_zmp = yaml_loader.w_zmp;
+    mpc_settings_.w_zmp = yaml_loader.w_zmp.asDiagonal();
 
     // Foot pos Cost
     mpc_settings_.w_foot_pos = yaml_loader.w_foot_pos.asDiagonal();

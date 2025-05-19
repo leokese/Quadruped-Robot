@@ -10,16 +10,16 @@ using CostAbstract = aligator::CostAbstractTpl<double>;
 using MultibodyPhaseSpace = proxsuite::nlp::MultibodyPhaseSpace<double>;
 using CostData = aligator::CostDataAbstractTpl<double>;
 
-
 struct ZmpResidualCostData;
 
 struct ZmpResidualCost : CostAbstract
 {
 
-    ZmpResidualCost(MultibodyPhaseSpace space,
-                          int nu,
-                          std::vector<int> contact_feet_id,
-                          double cf);
+    ZmpResidualCost(MultibodyPhaseSpace space, int nu,
+                    std::vector<FrameIndex> contact_frame_id,
+                    std::vector<bool> contact_state,
+                    int force_size,
+                    MatrixXd weight);
 
     void evaluate(const ConstVectorRef &x, const ConstVectorRef &u,
                   CostData &data) const override;
@@ -33,10 +33,10 @@ struct ZmpResidualCost : CostAbstract
     std::shared_ptr<CostData> createData() const override;
 
     MultibodyPhaseSpace space_;
-    std::vector<int> contact_feet_id_;
-    double cf_ = 1.0;
-
-    std::vector<int> foot_frame_ids_{11, 19, 27, 35};
+    std::vector<FrameIndex> contact_frame_id_;
+    std::vector<bool> contact_state_;
+    int force_size_;
+    MatrixXd weight_;
 };
 
 struct ZmpResidualCostData : CostData

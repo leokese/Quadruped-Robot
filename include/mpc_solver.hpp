@@ -16,7 +16,7 @@ struct MPCSettings
     MatrixXd w_foot_pos;   // 腿的平移权重
     MatrixXd w_fly_high;   // fly_high目标权重
     double fly_high_slope; // fly_high斜率
-    double w_zmp;
+    MatrixXd w_zmp;
 
     double dt = 20e-3;                        // Timestep
     double mu = 0.8;                          // Friction coefficient

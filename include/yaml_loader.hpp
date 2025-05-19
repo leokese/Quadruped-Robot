@@ -24,7 +24,7 @@ struct YamlLoader
     Eigen::VectorXd w_fly_high;
     double fly_high_slope;
 
-    double w_zmp;
+    Eigen::VectorXd w_zmp;
 
     Eigen::VectorXd w_arm_pos;
     Eigen::VectorXd w_arm_vel;
@@ -53,7 +53,7 @@ struct YamlLoader
             w_fly_high = loadVector("w_fly_high");
             fly_high_slope = config["fly_high_slope"].as<double>();
 
-            w_zmp = config["w_zmp"].as<double>();
+            w_zmp = loadVector("w_zmp");
 
             w_arm_pos = loadVector("w_arm_pos");
             w_arm_vel = loadVector("w_arm_vel");
