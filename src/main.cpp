@@ -108,25 +108,6 @@ int main(int argc, char const *argv[])
     int nsteps = gait.nsteps; // 离散时刻的数量
     feet_contact_states = gait.generateFootStates();
     feet_contact_poses = gait.generateFootTrajectory();
-    
-    ////////////////////////// 打印 feet_contact_poses //////////////////////////////
-    // for (size_t i = 0; i < feet_contact_poses.size(); ++i)
-    // {
-    //     std::cout << "Step " << i << ":" << std::endl;
-    //     for (size_t j = 0; j < feet_contact_poses[i].size(); ++j)
-    //     {
-    //         std::cout << "  Foot " << j << ": " << feet_contact_poses[i][j].transpose() << std::endl;
-    //     }
-    // }
-    // for (size_t i = 0; i < feet_contact_states.size(); ++i)
-    // {
-    //     std::cout << "Step " << i << ": ";
-    //     for (size_t j = 0; j < feet_contact_states[i].size(); ++j)
-    //     {
-    //         std::cout << feet_contact_states[i][j] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
 
     ////////////////////////// 生成身体期望接触位姿 //////////////////////////////
     SE3 final_body_pose = SE3(init_body_pose.rotation(),
