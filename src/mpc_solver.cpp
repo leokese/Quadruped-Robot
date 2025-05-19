@@ -38,7 +38,7 @@ StageModel MPCSolver::createStage(int k)
         {
             FlyHighResidual fly_res(space_.ndx(), model, contact_id_[i], mpc_settings_.fly_high_slope, nu_);
             cost.addCost(QuadraticResidualCost(space_, fly_res, mpc_settings_.w_fly_high));
-            
+
             // FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
             // cost.addCost(QuadraticResidualCost(space_, frame_res, mpc_settings_.w_foot_pos));
         }
@@ -60,20 +60,29 @@ StageModel MPCSolver::createStage(int k)
             // // 添加速度约束
             // Motion zero_velocity = Motion::Zero();
             // FrameVelocityResidual vel_residual(space_.ndx(), nu_, model, zero_velocity, contact_id_[i], pinocchio::LOCAL);
-            // stage_model.addConstraint(vel_residual, EqualityConstraint());
+            // std::vector<int> linear_vel_id = {0, 1}; // 只考虑x,y速度，因为z速度与高度约束重叠了
+            // FunctionSliceXpr vel_slice = FunctionSliceXpr(vel_residual, linear_vel_id);
+            // stage_model.addConstraint(vel_slice, EqualityConstraint());
 
             // 添加接触力约束
             CentroidalFrictionConeResidual friction_residual(space_.ndx(), nu_, i, mpc_settings_.mu, 1e-5);
             stage_model.addConstraint(friction_residual, NegativeOrthant());
 
             // // 添加高度约束
-            // std::vector<int> height_id = {2};
             // FrameTranslationResidual foot_trans_res(space_.ndx(), nu_, model, Vector3d::Zero(), contact_id_[i]);
+            // std::vector<int> height_id = {2};
             // FunctionSliceXpr height_res = FunctionSliceXpr(foot_trans_res, height_id);
             // stage_model.addConstraint(height_res, EqualityConstraint());
 
+            // 添加落足点约束
             FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
             stage_model.addConstraint(frame_res, EqualityConstraint());
+
+            // // 添加高度约束
+            // FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
+            // std::vector<int> height_id = {2};
+            // FunctionSliceXpr height_res = FunctionSliceXpr(frame_res, height_id);
+            // stage_model.addConstraint(frame_res, EqualityConstraint());
         }
     }
 
@@ -94,7 +103,9 @@ void MPCSolver::createProblem(const VectorXd &x0, const VectorXd &x_ref_term)
     problem_ = std::make_unique<TrajOptProblem>(x0, stages, term_cost);
 }
 
-std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const VectorXd &x0)
+std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const VectorXd &x0,
+                                                                         const std::vector<VectorXd> &x_init,
+                                                                         const std::vector<VectorXd> &u_init)
 {
 
     double TOL = 1e-5;
@@ -103,16 +114,13 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const V
 
     SolverProxDDP solver(TOL, mu_init, max_iters, proxsuite::nlp::VERBOSE);
     solver.rollout_type_ = aligator::RolloutType::LINEAR;
-    solver.sa_strategy_ = aligator::StepAcceptanceStrategy::FILTER;
+    // solver.sa_strategy_ = aligator::StepAcceptanceStrategy::FILTER;
     solver.force_initial_condition_ = true;
-    solver.filter_.beta_ = 1e-5;
+    // solver.filter_.beta_ = 1e-5;
     solver.setNumThreads(4);
     solver.setup(*problem_);
 
-    std::vector<VectorXd> xs_init(nsteps_ + 1, x0);
-    std::vector<VectorXd> us_init(nsteps_, u_ref_[0]);
-
-    solver.run(*problem_, xs_init, us_init);
+    solver.run(*problem_, x_init, u_init);
 
     std::vector<VectorXd> xs = solver.results_.xs;
     std::vector<VectorXd> us = solver.results_.us;

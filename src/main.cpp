@@ -68,8 +68,9 @@ int main(int argc, char const *argv[])
     VectorXd u0(nu);
     double mass = pinocchio::computeTotalMass(model);
     Vector3d f_foot_ref(0, 0, -mass * mpc_settings.gravity[2] / 4.0);
-    u0 << f_foot_ref, f_foot_ref, f_foot_ref, f_foot_ref,
-        VectorXd::Zero(nv - 6);
+    // u0 << f_foot_ref, f_foot_ref, f_foot_ref, f_foot_ref,
+    //     VectorXd::Zero(nv - 6);
+    u0.setZero();
 
     const FrameIndex FL_id = model.getFrameId("FL_foot_link", pinocchio::BODY);
     const FrameIndex FR_id = model.getFrameId("FR_foot_link", pinocchio::BODY);
@@ -116,17 +117,26 @@ int main(int argc, char const *argv[])
 
     ////////////////////////// 生成期望状态 //////////////////////////////
     std::vector<VectorXd> x_ref(nsteps, x0);
-    // for (size_t i = 0; i < nsteps; i++)
-    // {
-    //     x_ref[i].head(3) = body_pose[i].translation();
-    //     x_ref[i].segment(3, 4) = Eigen::Quaterniond(body_pose[i].rotation()).coeffs();
-    // }
+    for (size_t i = 0; i < nsteps; i++)
+    {
+        x_ref[i].head(3) = body_pose[i].translation();
+        x_ref[i].segment(3, 4) = Eigen::Quaterniond(body_pose[i].rotation()).coeffs();
+    }
     std::vector<VectorXd> u_ref(nsteps, u0);
+
+    /////////////////////////// 热启动设置 //////////////////////////////
+    std::vector<VectorXd> x_init(nsteps + 1, x0);
+    VectorXd u_nom = VectorXd::Zero(nu);
+    for (int i = 0; i < 4; ++i)
+    {
+        u_nom.segment(i * force_size, force_size) = f_foot_ref;
+    }
+    std::vector<VectorXd> us_init(nsteps, u_nom);
 
     MPCSolver mpc_solver(space, nsteps, nu, x0, x_ref, u_ref, contact_ids,
                          feet_contact_poses, feet_contact_states, yaml_loader);
 
-    auto result = mpc_solver.solve(x0);
+    auto result = mpc_solver.solve(x0, x_init, us_init);
     auto xs = result.first;
     auto us = result.second;
 

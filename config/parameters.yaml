@@ -13,7 +13,7 @@ w_u_leg_acc: [1e-6, 1e-6, 1e-6]
 w_u_arm_acc: [1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3]
 
 # Fly High Cost
-w_fly_high: [2, 2]
+w_fly_high: [20, 20]
 fly_high_slope: 40.0
 
 # ZMP Cost

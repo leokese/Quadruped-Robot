@@ -54,5 +54,7 @@ public:
               const std::vector<std::vector<bool>> &contact_states,
               const YamlLoader &yaml_loader);
 
-    std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve(const VectorXd &x0);
+    std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve(const VectorXd &x0,
+                                                                  const std::vector<VectorXd> &x_init,
+                                                                  const std::vector<VectorXd> &u_init);
 };
