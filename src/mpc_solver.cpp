@@ -7,7 +7,6 @@ MPCSolver::MPCSolver(const MultibodyPhaseSpace &space,
                      const std::vector<VectorXd> &x_ref,
                      const std::vector<VectorXd> &u_ref,
                      std::vector<FrameIndex> contact_id,
-                     const std::vector<SE3> &arm_contact_poses,
                      const std::vector<std::vector<Vector3d>> &foot_contact_poses,
                      const std::vector<std::vector<bool>> &contact_states,
                      const YamlLoader &yaml_loader)
@@ -17,12 +16,12 @@ MPCSolver::MPCSolver(const MultibodyPhaseSpace &space,
       x_ref_(x_ref),
       u_ref_(u_ref),
       contact_id_(contact_id),
-      arm_contact_poses_(arm_contact_poses),
       foot_contact_poses_(foot_contact_poses),
       contact_states_(contact_states)
 {
     initCostWeight(yaml_loader);
     createProblem(x0, x_ref.back());
+    std::cout << "MPCSolver" << std::endl;
 }
 
 StageModel MPCSolver::createStage(int k)
@@ -45,22 +44,10 @@ StageModel MPCSolver::createStage(int k)
         }
     }
 
-    std::vector<int> contact_feet_id;
-    for (size_t i = 0; i < 4; i++)
-    {
-        if (contact_states_[k][i])
-        {
-            contact_feet_id.push_back(i);
-        }
-    }
-
     // // todo: 改成只有当接触状态由摆动腿变为支撑腿时才出现
     // ZmpResidualCost zmp_residual(space_, nu_, contact_feet_id, mpc_settings_.w_zmp);
     // CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
     // cost.addCost("zmp_residual_cost", zmp_fini_diff);
-
-    FramePlacementResidual arm_ee_pos(space_.ndx(), nu_, model, arm_contact_poses_[k], contact_id_[4]);
-    cost.addCost(QuadraticResidualCost(space_, arm_ee_pos, mpc_settings_.w_arm_pos));
 
     KinodynamicsFwdDynamics ode(space_, model, mpc_settings_.gravity, contact_states_[k], contact_id_, mpc_settings_.force_size);
     IntegratorEuler dyn_model(ode, mpc_settings_.dt);
@@ -139,18 +126,14 @@ void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
     Eigen::VectorXd w_x_diag(space_.ndx());
     w_x_diag << yaml_loader.w_x_body_pos,
         yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos,
-        yaml_loader.w_x_arm_pos,
         yaml_loader.w_x_body_vel,
-        yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel,
-        yaml_loader.w_x_arm_vel;
+        yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel;
     mpc_settings_.w_x = w_x_diag.asDiagonal();
 
     // Control Cost
     Eigen::VectorXd w_u_diag(nu_);
     w_u_diag << yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force,
-        yaml_loader.w_u_arm_force,
-        yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc,
-        yaml_loader.w_u_arm_acc;
+        yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc;
     mpc_settings_.w_u = w_u_diag.asDiagonal();
 
     // Fly High Cost
@@ -159,10 +142,6 @@ void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
 
     // ZMP Cost
     mpc_settings_.w_zmp = yaml_loader.w_zmp;
-
-    // Arm EE Cost
-    mpc_settings_.w_arm_pos = yaml_loader.w_arm_pos.asDiagonal();
-    mpc_settings_.w_arm_vel = yaml_loader.w_arm_vel.asDiagonal();
 
     // Foot pos Cost
     mpc_settings_.w_foot_pos = yaml_loader.w_foot_pos.asDiagonal();

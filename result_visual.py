@@ -7,7 +7,8 @@ from pinocchio.visualize import MeshcatVisualizer
 csv_path = "/home/zishang/cpp_workspace/Quadruped-Robot/build/solo_kinodynamics_result_xs.csv"
 
 # 读取URDF文件和创建机器人模型
-urdf_path = "/home/zishang/cpp_workspace/Quadruped-Robot/robot/galileo_mini_x5_description/galileo_mini_x5.urdf"
+# urdf_path = "/home/zishang/cpp_workspace/Quadruped-Robot/robot/galileo_mini_x5_description/galileo_mini_x5.urdf"
+urdf_path = "/home/zishang/cpp_workspace/Quadruped-Robot/robot/galileo_mini/robot.urdf"
 model = pin.buildModelFromUrdf(urdf_path)
 # package_dirs = ["/home/robot/文档/vs_project/quadruped_mpc_8/robot"]
 # visual_model = pin.buildGeomFromUrdf(model, urdf_path, pin.GeometryType.VISUAL, package_dirs=package_dirs)

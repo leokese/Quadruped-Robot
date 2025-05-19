@@ -13,10 +13,7 @@ struct MPCSettings
 {
     MatrixXd w_x;          // 状态权重
     MatrixXd w_u;          // 输入权重
-    MatrixXd w_foot_pos;       // 腿的平移权重
-    MatrixXd w_cent_mom;   // 角动量导数权重
-    MatrixXd w_arm_pos;    // 机械臂末端位姿权重
-    MatrixXd w_arm_vel;    // 机械臂末端速度权重
+    MatrixXd w_foot_pos;   // 腿的平移权重
     MatrixXd w_fly_high;   // fly_high目标权重
     double fly_high_slope; // fly_high斜率
     double w_zmp;
@@ -32,7 +29,6 @@ class MPCSolver
 private:
     MPCSettings mpc_settings_;
     const MultibodyPhaseSpace &space_;
-    std::vector<SE3> arm_contact_poses_;
     std::vector<std::vector<Vector3d>> foot_contact_poses_;
     std::vector<std::vector<bool>> contact_states_;
     std::vector<FrameIndex> contact_id_;
@@ -54,7 +50,6 @@ public:
               const std::vector<VectorXd> &x_ref,
               const std::vector<VectorXd> &u_ref,
               std::vector<FrameIndex> contact_id,
-              const std::vector<SE3> &arm_contact_poses,
               const std::vector<std::vector<Vector3d>> &foot_contact_poses,
               const std::vector<std::vector<bool>> &contact_states,
               const YamlLoader &yaml_loader);
