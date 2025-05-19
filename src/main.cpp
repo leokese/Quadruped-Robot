@@ -120,6 +120,7 @@ int main(int argc, char const *argv[])
                                            HL_pose.translation(), HR_pose.translation()};
 
     SE3 init_arm_pose = data.oMf[arm_id];
+    SE3 init_body_pose = data.oMf[body_id];
 
     ////////////////////////// 生成腿部接触状态与位姿 //////////////////////////////
     std::vector<std::vector<Vector3d>> feet_contact_poses;
@@ -170,10 +171,24 @@ int main(int argc, char const *argv[])
         contact_states.push_back(combined_vec);
     }
 
+    ////////////////////////// 生成身体期望接触位姿 //////////////////////////////
+    SE3 final_body_pose = SE3(init_body_pose.rotation(),
+                              init_body_pose.translation() + Vector3d(-0.6, 0, 0));
+    std::vector<SE3> body_pose = generateSE3Trajectory(init_body_pose, final_body_pose, nsteps);
 
-    MPCSolver mpc_solver(space, nsteps, nu, x0, u0, contact_ids,
+    ////////////////////////// 生成期望状态 //////////////////////////////
+    std::vector<VectorXd> x_ref(nsteps, x0);
+    for (size_t i = 0; i < nsteps; i++)
+    {
+        x_ref[i].head(3) = body_pose[i].translation();
+        x_ref[i].segment(3, 4) = Eigen::Quaterniond(body_pose[i].rotation()).coeffs();
+        std::cout << "x_ref[" << i << "] = " << x_ref[i].transpose() << std::endl;
+    }
+    std::vector<VectorXd> u_ref(nsteps, u0);
+
+    MPCSolver mpc_solver(space, nsteps, nu, x0, x_ref, u_ref, contact_ids,
                          arm_contact_poses, feet_contact_poses, contact_states, yaml_loader);
-          
+
     auto result = mpc_solver.solve(x0);
     auto xs = result.first;
     auto us = result.second;

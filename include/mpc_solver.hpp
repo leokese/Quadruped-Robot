@@ -31,15 +31,15 @@ class MPCSolver
 {
 private:
     MPCSettings mpc_settings_;
-    const MultibodyPhaseSpace &space;
-    std::vector<SE3> arm_contact_places;
-    std::vector<std::vector<Vector3d>> &contact_poses;
-    std::vector<std::vector<bool>> &contact_states;
-    std::vector<FrameIndex> contact_ids;
-    VectorXd x0;
-    VectorXd u0;
-    int nu;
-    int nsteps;
+    const MultibodyPhaseSpace &space_;
+    std::vector<SE3> arm_contact_poses_;
+    std::vector<std::vector<Vector3d>> foot_contact_poses_;
+    std::vector<std::vector<bool>> contact_states_;
+    std::vector<FrameIndex> contact_id_;
+    std::vector<VectorXd> x_ref_;
+    std::vector<VectorXd> u_ref_;
+    int nu_;
+    int nsteps_;
     std::unique_ptr<TrajOptProblem> problem_;
 
     void initCostWeight(const YamlLoader &yaml_loader);
@@ -47,12 +47,17 @@ private:
     void createProblem(const VectorXd &x0, const VectorXd &x_ref_term);
 
 public:
-    MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, VectorXd x0_, VectorXd u0_,
-              std::vector<FrameIndex> contact_ids_,
-              std::vector<SE3> arm_contact_place_,
-              std::vector<std::vector<Vector3d>> &contact_poses_,
-              std::vector<std::vector<bool>> &contact_states_,
-              const YamlLoader &yaml_loader_);
+    MPCSolver(const MultibodyPhaseSpace &space,
+              int nsteps,
+              int nu,
+              const VectorXd &x0,
+              const std::vector<VectorXd> &x_ref,
+              const std::vector<VectorXd> &u_ref,
+              std::vector<FrameIndex> contact_id,
+              const std::vector<SE3> &arm_contact_poses,
+              const std::vector<std::vector<Vector3d>> &foot_contact_poses,
+              const std::vector<std::vector<bool>> &contact_states,
+              const YamlLoader &yaml_loader);
 
     std::pair<std::vector<VectorXd>, std::vector<VectorXd>> solve(const VectorXd &x0);
 };

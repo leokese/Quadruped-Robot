@@ -1,78 +1,85 @@
 #include "mpc_solver.hpp"
 
-MPCSolver::MPCSolver(const MultibodyPhaseSpace &space_, int nsteps_, int nu_, VectorXd x0_, VectorXd u0_,
-                     std::vector<FrameIndex> contact_ids_,
-                     std::vector<SE3> arm_contact_place_,
-                     std::vector<std::vector<Vector3d>> &contact_poses_,
-                     std::vector<std::vector<bool>> &contact_states_,
-                     const YamlLoader &yaml_loader_)
-    : space(space_),
-      nsteps(nsteps_),
-      nu(nu_), x0(x0_), u0(u0_),
-      contact_ids(contact_ids_),
-      arm_contact_places(arm_contact_place_),
-      contact_poses(contact_poses_),
-      contact_states(contact_states_)
+MPCSolver::MPCSolver(const MultibodyPhaseSpace &space,
+                     int nsteps,
+                     int nu,
+                     const VectorXd &x0,
+                     const std::vector<VectorXd> &x_ref,
+                     const std::vector<VectorXd> &u_ref,
+                     std::vector<FrameIndex> contact_id,
+                     const std::vector<SE3> &arm_contact_poses,
+                     const std::vector<std::vector<Vector3d>> &foot_contact_poses,
+                     const std::vector<std::vector<bool>> &contact_states,
+                     const YamlLoader &yaml_loader)
+    : space_(space),
+      nsteps_(nsteps),
+      nu_(nu),
+      x_ref_(x_ref),
+      u_ref_(u_ref),
+      contact_id_(contact_id),
+      arm_contact_poses_(arm_contact_poses),
+      foot_contact_poses_(foot_contact_poses),
+      contact_states_(contact_states)
 {
-    initCostWeight(yaml_loader_);
-    createProblem(x0, x0);
+    initCostWeight(yaml_loader);
+    createProblem(x0, x_ref.back());
 }
 
 StageModel MPCSolver::createStage(int k)
 {
-    const Model &model = space.getModel();
+    const Model &model = space_.getModel();
 
-    CostStack cost(space, nu);
+    CostStack cost(space_, nu_);
 
-    cost.addCost(QuadraticStateCost(space, nu, x0, mpc_settings_.w_x));
-    cost.addCost(QuadraticControlCost(space, u0, mpc_settings_.w_u));
+    cost.addCost(QuadraticStateCost(space_, nu_, x_ref_[k], mpc_settings_.w_x));
+    cost.addCost(QuadraticControlCost(space_, u_ref_[k], mpc_settings_.w_u));
 
     for (size_t i = 0; i < 4; i++)
     {
-        if (!contact_states[k][i]) // 只考虑摆动腿轨迹跟踪
+        if (!contact_states_[k][i]) // 只考虑摆动腿轨迹跟踪
         {
-            FlyHighResidual fly_res(space.ndx(), model, contact_ids[i], mpc_settings_.fly_high_slope, nu);
-            cost.addCost(QuadraticResidualCost(space, fly_res, mpc_settings_.w_fly_high));
+            FlyHighResidual fly_res(space_.ndx(), model, contact_id_[i], mpc_settings_.fly_high_slope, nu_);
+            cost.addCost(QuadraticResidualCost(space_, fly_res, mpc_settings_.w_fly_high));
         }
     }
 
     std::vector<int> contact_feet_id;
     for (size_t i = 0; i < 4; i++)
     {
-        if (contact_states[k][i])
+        if (contact_states_[k][i])
         {
             contact_feet_id.push_back(i);
         }
     }
 
     // todo: 改成只有当接触状态由摆动腿变为支撑腿时才出现
-    ZmpResidualCost zmp_residual(space, nu, contact_feet_id, mpc_settings_.w_zmp);
+    ZmpResidualCost zmp_residual(space_, nu_, contact_feet_id, mpc_settings_.w_zmp);
     CostFiniteDifference zmp_fini_diff(zmp_residual, 1e-6);
     cost.addCost("zmp_residual_cost", zmp_fini_diff);
 
-    FramePlacementResidual arm_ee_pos(space.ndx(), nu, model, arm_contact_places[k], contact_ids[4]);
-    cost.addCost(QuadraticResidualCost(space, arm_ee_pos, mpc_settings_.w_arm_pos));
+    FramePlacementResidual arm_ee_pos(space_.ndx(), nu_, model, arm_contact_poses_[k], contact_id_[4]);
+    cost.addCost(QuadraticResidualCost(space_, arm_ee_pos, mpc_settings_.w_arm_pos));
 
-    KinodynamicsFwdDynamics ode(space, model, mpc_settings_.gravity, contact_states[k], contact_ids, mpc_settings_.force_size);
+    KinodynamicsFwdDynamics ode(space_, model, mpc_settings_.gravity, contact_states_[k], contact_id_, mpc_settings_.force_size);
     IntegratorEuler dyn_model(ode, mpc_settings_.dt);
     StageModel stage_model(cost, dyn_model);
 
     for (size_t i = 0; i < 4; i++)
     {
-        if (contact_states[k][i])
+        if (contact_states_[k][i])
         {
             // 添加速度约束
             Motion zero_velocity = Motion::Zero();
-            FrameVelocityResidual vel_residual(space.ndx(), nu, model, zero_velocity, contact_ids[i], pinocchio::WORLD);
+            FrameVelocityResidual vel_residual(space_.ndx(), nu_, model, zero_velocity, contact_id_[i], pinocchio::LOCAL);
             stage_model.addConstraint(vel_residual, EqualityConstraint());
 
             // 添加接触力约束
-            CentroidalFrictionConeResidual friction_residual(space.ndx(), nu, i, mpc_settings_.mu, 1e-5);
+            CentroidalFrictionConeResidual friction_residual(space_.ndx(), nu_, i, mpc_settings_.mu, 1e-5);
             stage_model.addConstraint(friction_residual, NegativeOrthant());
 
             // 添加高度约束
             std::vector<int> height_id = {2};
-            FrameTranslationResidual foot_trans_res(space.ndx(), nu, model, Vector3d::Zero(), contact_ids[i]);
+            FrameTranslationResidual foot_trans_res(space_.ndx(), nu_, model, Vector3d::Zero(), contact_id_[i]);
             FunctionSliceXpr height_res = FunctionSliceXpr(foot_trans_res, height_id);
             stage_model.addConstraint(height_res, EqualityConstraint());
         }
@@ -83,11 +90,11 @@ StageModel MPCSolver::createStage(int k)
 
 void MPCSolver::createProblem(const VectorXd &x0, const VectorXd &x_ref_term)
 {
-    CostStack term_cost(space, nu);
-    term_cost.addCost(QuadraticStateCost(space, nu, x_ref_term, 0 * mpc_settings_.w_x));
+    CostStack term_cost(space_, nu_);
+    term_cost.addCost(QuadraticStateCost(space_, nu_, x_ref_term, 0 * mpc_settings_.w_x));
 
     std::vector<xyz::polymorphic<StageModel>> stages;
-    for (size_t i = 0; i < nsteps; i++)
+    for (size_t i = 0; i < nsteps_; i++)
     {
         stages.push_back(createStage(i));
     }
@@ -102,7 +109,7 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const V
     double TOL = 1e-3;
     // double mu_init = 1e-8;
     double mu_init = 1e-5;
-    size_t max_iters = 100;
+    size_t max_iters = 1000;
 
     SolverProxDDP solver(TOL, mu_init, max_iters, proxsuite::nlp::VERBOSE);
     solver.rollout_type_ = aligator::RolloutType::LINEAR;
@@ -112,8 +119,8 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const V
     solver.setNumThreads(4);
     solver.setup(*problem_);
 
-    std::vector<VectorXd> xs_init(nsteps + 1, x0);
-    std::vector<VectorXd> us_init(nsteps, u0);
+    std::vector<VectorXd> xs_init(nsteps_ + 1, x0);
+    std::vector<VectorXd> us_init(nsteps_, u_ref_[0]);
 
     solver.run(*problem_, xs_init, us_init);
 
@@ -126,7 +133,7 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const V
 void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
 {
     // State Cost
-    Eigen::VectorXd w_x_diag(space.ndx());
+    Eigen::VectorXd w_x_diag(space_.ndx());
     w_x_diag << yaml_loader.w_x_body_pos,
         yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos,
         yaml_loader.w_x_arm_pos,
@@ -136,7 +143,7 @@ void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
     mpc_settings_.w_x = w_x_diag.asDiagonal();
 
     // Control Cost
-    Eigen::VectorXd w_u_diag(nu);
+    Eigen::VectorXd w_u_diag(nu_);
     w_u_diag << yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force,
         yaml_loader.w_u_arm_force,
         yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc,

@@ -1,5 +1,5 @@
 # State Cost
-w_x_body_pos: [0, 0, 500, 100, 100, 100]
+w_x_body_pos: [100, 100, 500, 100, 100, 100]
 w_x_leg_pos: [5, 5, 2.5]
 w_x_arm_pos: [5, 5, 5, 5, 5, 5]
 w_x_body_vel: [1e-06, 1e-06, 1e-06, 1e-06, 1e-06, 1e-06]
@@ -8,7 +8,7 @@ w_x_arm_vel: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
 
 # Control Cost
 w_u_foot_force: [1e-3, 1e-3, 1e-3]
-w_u_arm_force: [1000, 1000, 1000]
+w_u_arm_force: [100, 100, 100]
 w_u_leg_acc: [1e-3, 1e-3, 1e-3]
 w_u_arm_acc: [1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3]
 
@@ -17,7 +17,7 @@ w_fly_high: [1e-3, 1e-3]
 fly_high_slope: 40.0
 
 # ZMP Cost
-w_zmp: 0
+w_zmp: 100
 
 # Arm EE Cost
 w_arm_pos: [1000, 1000, 1000, 1000, 1000, 1000]
