@@ -46,8 +46,11 @@ int main()
     auto zmp_data = zmp_residual.createData();
 
     zmp_residual.evaluate(x0, u0, *zmp_data);
+    zmp_residual.computeJacobians(x0, u0, *zmp_data);
 
     std::cout << "zmp residual: " << zmp_data->value_.transpose() << std::endl;
+    std::cout << "Jx:\n " << zmp_data->Jx_ << std::endl;
+    std::cout << "Ju:\n " << zmp_data->Ju_ << std::endl;
 
     return 0;
 }

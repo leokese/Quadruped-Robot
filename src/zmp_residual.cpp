@@ -21,30 +21,8 @@ void ZmpResidual::evaluate(const ConstVectorRef &x, const ConstVectorRef &u,
     pinocchio::forwardKinematics(model_, d.data_, q);
     pinocchio::updateFramePlacements(model_, d.data_);
 
-    Vector3d F_c = Vector3d::Zero();
-    Vector3d M_c = Vector3d::Zero();
-    Vector3d f_i;
-    for (size_t i = 0; i < contact_frame_id_.size(); i++)
-    {
-        f_i = f_contact.segment(i * force_size_, force_size_);
-        F_c += f_i;
-        M_c += (d.data_.oMf[contact_frame_id_[i]].translation()).cross(f_i);
-    }
-    Vector3d n(0, 0, 1);
-    Vector3d pos_zmp = n.cross(M_c) / (n.transpose() * F_c);
-
-    // 计算接触点中心
-    Vector3d pos_center = Vector3d::Zero();
-    int num_contact = 0;
-    for (size_t i = 0; i < contact_state_.size(); i++)
-    {
-        if (contact_state_[i]) // 只考虑支撑腿
-        {
-            pos_center += d.data_.oMf[contact_frame_id_[i]].translation();
-            num_contact++;
-        }
-    }
-    pos_center /= num_contact;
+    Vector3d pos_zmp = calcZmpPosition<double>(d.data_, f_contact, contact_frame_id_, force_size_);
+    Vector3d pos_center = calcContactCenterPosition<double>(d.data_, contact_state_, contact_frame_id_);
 
     // 计算zmp残差(只考虑x,y方向)
     data.value_ = (pos_zmp - pos_center).head(2);
@@ -53,7 +31,24 @@ void ZmpResidual::evaluate(const ConstVectorRef &x, const ConstVectorRef &u,
 void ZmpResidual::computeJacobians(const ConstVectorRef &x, const ConstVectorRef &u,
                                    StageFunctionData &data) const
 {
-    // todo: 使用cppad求导
+    ZmpResidualData &d = static_cast<ZmpResidualData &>(data);
+    const int nq = model_.nq;
+    const int nv = model_.nv;
+    const int nf = contact_frame_id_.size() * force_size_;
+    const int nr = 2;
+
+    VectorXd X(nq + nv + nf + nv); // q, v, f, dq
+    X << x, u.head(nf), Eigen::VectorXd::Zero(nv);
+
+    Eigen::VectorXd dy_dx_vec = d.ad_zmp_residual_.Jacobian(X);
+    Eigen::MatrixXd dy_dx = dy_dx_vec.reshaped(X.size(), nr).transpose();
+    Eigen::MatrixXd dy_dq = dy_dx.rightCols(nv);
+    Eigen::MatrixXd dy_dv = dy_dx.middleCols(nq, nv);
+    Eigen::MatrixXd dy_df = dy_dx.middleCols(nq + nv, nf);
+
+    d.Jx_.leftCols(nv) = dy_dq;
+    d.Jx_.rightCols(nv) = dy_dv;
+    d.Ju_.leftCols(nf) = dy_df;
 }
 
 std::shared_ptr<StageFunctionData> ZmpResidual::createData() const
@@ -65,4 +60,32 @@ ZmpResidualData::ZmpResidualData(const ZmpResidual &resdl)
     : StageFunctionData(resdl),
       data_(resdl.model_)
 {
+    //////////////////////////////////////// 定义cppad函数 ////////////////////////////////////////
+    using CppAD::AD;
+    using ADVectorX = Eigen::VectorX<AD<double>>;
+
+    pinocchio::ModelTpl<AD<double>> ad_model = resdl.model_.cast<AD<double>>();
+    pinocchio::DataTpl<AD<double>> ad_data(ad_model);
+    int nq = ad_model.nq;
+    int nv = ad_model.nv;
+    int nf = resdl.contact_frame_id_.size() * resdl.force_size_;
+
+    ADVectorX ad_X(nq + nv + nf + nv); // q, v, f, dq
+    ad_X.setZero();
+    CppAD::Independent(ad_X);
+    ADVectorX ad_Y(nv);
+
+    ADVectorX ad_q = ad_X.head(nq);
+    ADVectorX ad_v = ad_X.segment(nq, nv);
+    ADVectorX ad_f = ad_X.segment(nq + nv, nf);
+    ADVectorX ad_dq = ad_X.tail(nv);
+
+    ADVectorX ad_q_plus = pinocchio::integrate(ad_model, ad_q, ad_dq);
+    pinocchio::forwardKinematics(ad_model, ad_data, ad_q_plus, ad_v);
+    pinocchio::updateFramePlacements(ad_model, ad_data);
+
+    ADVectorX pos_zmp = calcZmpPosition<AD<double>>(ad_data, ad_f, resdl.contact_frame_id_, resdl.force_size_);
+    ADVectorX pos_center = calcContactCenterPosition<AD<double>>(ad_data, resdl.contact_state_, resdl.contact_frame_id_);
+    ad_Y = (pos_zmp - pos_center).head(2);
+    ad_zmp_residual_.Dependent(ad_X, ad_Y);
 }
