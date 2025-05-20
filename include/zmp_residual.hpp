@@ -12,6 +12,7 @@ using StageFunctionData = aligator::StageFunctionDataTpl<double>;
 template <typename Scalar>
 Vector3<Scalar> calcZmpPosition(const pinocchio::DataTpl<Scalar> &data,
                                 const VectorX<Scalar> &f_contact,
+                                const std::vector<bool> &contact_state,
                                 const std::vector<FrameIndex> &contact_frame_id,
                                 int force_size)
 {
@@ -20,9 +21,12 @@ Vector3<Scalar> calcZmpPosition(const pinocchio::DataTpl<Scalar> &data,
     Vector3<Scalar> f_i;
     for (size_t i = 0; i < contact_frame_id.size(); i++)
     {
-        f_i = f_contact.segment(i * force_size, force_size);
-        F_c += f_i;
-        M_c += (data.oMf[contact_frame_id[i]].translation()).cross(f_i);
+        if (contact_state[i])
+        {
+            f_i = f_contact.segment(i * force_size, force_size);
+            F_c += f_i;
+            M_c += (data.oMf[contact_frame_id[i]].translation()).cross(f_i);
+        }
     }
     Vector3<Scalar> n(Scalar(0), Scalar(0), Scalar(1));
     Vector3<Scalar> pos_zmp = n.cross(M_c) / (n.transpose() * F_c);

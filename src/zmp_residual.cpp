@@ -21,7 +21,7 @@ void ZmpResidual::evaluate(const ConstVectorRef &x, const ConstVectorRef &u,
     pinocchio::forwardKinematics(model_, d.data_, q);
     pinocchio::updateFramePlacements(model_, d.data_);
 
-    Vector3d pos_zmp = calcZmpPosition<double>(d.data_, f_contact, contact_frame_id_, force_size_);
+    Vector3d pos_zmp = calcZmpPosition<double>(d.data_, f_contact, contact_state_, contact_frame_id_, force_size_);
     Vector3d pos_center = calcContactCenterPosition<double>(d.data_, contact_state_, contact_frame_id_);
 
     // 计算zmp残差(只考虑x,y方向)
@@ -84,7 +84,7 @@ ZmpResidualData::ZmpResidualData(const ZmpResidual &resdl)
     pinocchio::forwardKinematics(ad_model, ad_data, ad_q_plus, ad_v);
     pinocchio::updateFramePlacements(ad_model, ad_data);
 
-    ADVectorX pos_zmp = calcZmpPosition<AD<double>>(ad_data, ad_f, resdl.contact_frame_id_, resdl.force_size_);
+    ADVectorX pos_zmp = calcZmpPosition<AD<double>>(ad_data, ad_f, resdl.contact_state_, resdl.contact_frame_id_, resdl.force_size_);
     ADVectorX pos_center = calcContactCenterPosition<AD<double>>(ad_data, resdl.contact_state_, resdl.contact_frame_id_);
     ad_Y = (pos_zmp - pos_center).head(2);
     ad_zmp_residual_.Dependent(ad_X, ad_Y);
