@@ -90,5 +90,6 @@ def update2D(frame):
 ani = animation.FuncAnimation(fig, update2D, frames=num_frames, interval=50)
 # plt.show()
 # 保存为 MP4 文件
-ani.save("quadruped_zmp_motion.mp4", writer='ffmpeg', fps=20)
-print("MP4 保存成功：quadruped_zmp_motion.mp4")
+mp4_filename = "quadruped_zmp_motion_fly_high.mp4"
+ani.save(mp4_filename, writer='ffmpeg', fps=20)
+print(mp4_filename + " saved successfully.")

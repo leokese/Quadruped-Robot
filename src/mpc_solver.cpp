@@ -36,11 +36,11 @@ StageModel MPCSolver::createStage(int k)
     {
         if (!contact_states_[k][i]) // 只考虑摆动腿轨迹跟踪
         {
-            // FlyHighResidual fly_res(space_.ndx(), model, contact_id_[i], mpc_settings_.fly_high_slope, nu_);
-            // cost.addCost(QuadraticResidualCost(space_, fly_res, mpc_settings_.w_fly_high));
+            FlyHighResidual fly_res(space_.ndx(), model, contact_id_[i], mpc_settings_.fly_high_slope, nu_);
+            cost.addCost(QuadraticResidualCost(space_, fly_res, mpc_settings_.w_fly_high));
 
-            FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
-            cost.addCost(QuadraticResidualCost(space_, frame_res, mpc_settings_.w_foot_pos));
+            // FrameTranslationResidual frame_res(space_.ndx(), nu_, model, foot_contact_poses_[k][i], contact_id_[i]);
+            // cost.addCost(QuadraticResidualCost(space_, frame_res, mpc_settings_.w_foot_pos));
         }
     }
 
