@@ -143,5 +143,26 @@ int main(int argc, char const *argv[])
     saveVectorsToCsv("solo_kinodynamics_result_xs.csv", xs);
     saveVectorsToCsv("solo_kinodynamics_result_us.csv", us);
 
+    /////////////////////////// 记录zmp位置 //////////////////////////////
+    std::vector<VectorXd> zmp_positions(nsteps);
+    std::vector<VectorXd> foot_positions(nsteps, VectorXd::Zero(3 * nc));
+    std::vector<VectorXd> contact_state(nsteps, VectorXd::Zero(4));
+
+    int nf = contact_ids.size() * force_size;
+    for (int i = 0; i < nsteps; ++i)
+    {
+        pinocchio::forwardKinematics(model, data, xs[i].head(nq));
+        pinocchio::updateFramePlacements(model, data);
+        zmp_positions[i] = calcZmpPosition<double>(data, us[i].head(nf), feet_contact_states[i], contact_ids, force_size);
+        for (int k = 0; k < 4; k++)
+        {
+            foot_positions[i].segment(k * 3, 3) = data.oMf[contact_ids[k]].translation();
+            contact_state[i](k) = feet_contact_states[i][k];
+        }
+    }
+    saveVectorsToCsv("solo_kinodynamics_result_zmp_pos.csv", zmp_positions);
+    saveVectorsToCsv("solo_kinodynamics_result_feet_pos.csv", foot_positions);
+    saveVectorsToCsv("solo_kinodynamics_result_contact_state.csv", contact_state);
+
     return 0;
 }

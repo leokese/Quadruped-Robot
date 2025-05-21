@@ -112,7 +112,7 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const V
 
     double TOL = 1e-5;
     double mu_init = 1e-8;
-    size_t max_iters = 100;
+    size_t max_iters = 1000;
 
     SolverProxDDP solver(TOL, mu_init, max_iters, proxsuite::nlp::VERBOSE);
     solver.rollout_type_ = aligator::RolloutType::LINEAR;
