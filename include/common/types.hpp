@@ -25,8 +25,12 @@
 #include <proxsuite-nlp/modelling/constraints/negative-orthant.hpp>
 #include <proxsuite-nlp/modelling/constraints/equality-constraint.hpp>
 #include <aligator/modelling/function-xpr-slice.hpp>
+#include <aligator/core/stage-data.hpp>
+#include <aligator/fwd.hpp>
+#include <aligator/modelling/dynamics/integrator-explicit.hpp>
 
-#include "joint_coordinate_residual.hpp"
+
+
 
 using Eigen::MatrixXd;
 using Eigen::Matrix3d;
@@ -34,6 +38,8 @@ using Eigen::Vector3d;
 using Eigen::VectorXd;
 using Eigen::VectorX;
 using Eigen::Vector3;
+using Vector6d = Eigen::Matrix<double, 6, 1>;
+using ConstVectorRef = Eigen::Ref<const VectorXd>;
 
 using pinocchio::Data;
 using pinocchio::FrameIndex;

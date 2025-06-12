@@ -1,4 +1,4 @@
-#include "zmp_residual.hpp"
+#include "mpc/zmp_residual.hpp"
 
 ZmpResidual::ZmpResidual(int ndx, int nu, const Model &model,
                          std::vector<FrameIndex> contact_frame_id,

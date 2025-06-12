@@ -27,3 +27,4 @@ w_arm_vel: [10, 10, 10, 10, 10, 10]
 
 # Foot Pos Cost
 w_foot_pos: [100, 100, 100]
+

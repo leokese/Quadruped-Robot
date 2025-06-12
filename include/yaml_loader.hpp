@@ -31,6 +31,8 @@ struct YamlLoader
 
     Eigen::VectorXd w_foot_pos;
 
+
+
     YamlLoader(const std::string &file_path)
     {
         try

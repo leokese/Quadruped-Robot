@@ -4,13 +4,13 @@ import pandas as pd
 import time
 from pinocchio.visualize import MeshcatVisualizer
 
-csv_path = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-2/solo_kinodynamics_result_xs.csv"
+csv_path = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-3/solo_kinodynamics_result_xs.csv"
 
 # 读取URDF文件和创建机器人模型
 # urdf_path = "/home/zishang/cpp_workspace/Quadruped-Robot/robot/galileo_mini_x5_description/galileo_mini_x5.urdf"
-urdf_path = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-2/robot/galileo_mini_x5_description/galileo_mini_x5.urdf"
+urdf_path = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-3/robot/galileo_v1d6_x5_description/galileo_v1d6_x5.urdf"
 model = pin.buildModelFromUrdf(urdf_path)
-package_dirs = ["/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-2/robot"]
+package_dirs = ["/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-3/robot"]
 visual_model = pin.buildGeomFromUrdf(model, urdf_path, pin.GeometryType.VISUAL, package_dirs=package_dirs)
 collision_model = pin.buildGeomFromUrdf(model, urdf_path,pin.GeometryType.COLLISION, package_dirs=package_dirs)
 

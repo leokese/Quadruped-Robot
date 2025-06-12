@@ -1,4 +1,4 @@
-#include "mpc_solver.hpp"
+#include "mpc/mpc_solver.hpp"
 
 MPCSolver::MPCSolver(const MultibodyPhaseSpace &space,
                      int nsteps,
@@ -10,7 +10,7 @@ MPCSolver::MPCSolver(const MultibodyPhaseSpace &space,
                      const std::vector<std::vector<Vector3d>> &foot_contact_poses,
                      const std::vector<SE3> &arm_contact_places,
                      const std::vector<std::vector<bool>> &contact_states,
-                     const YamlLoader &yaml_loader)
+                     const MPCSettings &mpc_settings)
     : space_(space),
       nsteps_(nsteps),
       nu_(nu),
@@ -19,9 +19,9 @@ MPCSolver::MPCSolver(const MultibodyPhaseSpace &space,
       contact_id_(contact_id),
       foot_contact_poses_(foot_contact_poses),
       arm_contact_places_(arm_contact_places),
-      contact_states_(contact_states)
+      contact_states_(contact_states),
+      mpc_settings_(mpc_settings)
 {
-    initCostWeight(yaml_loader);
     createProblem(x0, x_ref.back());
 }
 
@@ -52,19 +52,19 @@ StageModel MPCSolver::createStage(int k)
 
     size_t num_true = std::count(contact_states_[k].begin(), contact_states_[k].end(), true);
 
-    // if (num_true == 2 + 1)  // 2个脚接触 + 机械臂末端接触
-    // {
-    //     ZmpResidual zmp_residual(space_.ndx(), nu_, model, contact_id_, contact_states_[k], mpc_settings_.force_size);
-    //     QuadraticResidualCost zmp_cost(space_, zmp_residual, mpc_settings_.w_zmp);
-    //     cost.addCost(zmp_cost);
-    // }
+    if (num_true == 2 + 1)  // 2个脚接触 + 机械臂末端接触
+    {
+        ZmpResidual zmp_residual(space_.ndx(), nu_, model, contact_id_, contact_states_[k], mpc_settings_.force_size);
+        QuadraticResidualCost zmp_cost(space_, zmp_residual, mpc_settings_.w_zmp);
+        cost.addCost(zmp_cost);
+    }
 
-    ZmpResidual zmp_residual(space_.ndx(), nu_, model, contact_id_, contact_states_[k], mpc_settings_.force_size);
-    QuadraticResidualCost zmp_cost(space_, zmp_residual, mpc_settings_.w_zmp);
-    cost.addCost(zmp_cost);
+    // ZmpResidual zmp_residual(space_.ndx(), nu_, model, contact_id_, contact_states_[k], mpc_settings_.force_size);
+    // QuadraticResidualCost zmp_cost(space_, zmp_residual, mpc_settings_.w_zmp);
+    // cost.addCost(zmp_cost);
    
     KinodynamicsFwdDynamics ode(space_, model, mpc_settings_.gravity, contact_states_[k], contact_id_, mpc_settings_.force_size);
-    IntegratorEuler dyn_model(ode, mpc_settings_.dt);
+    IntegratorEuler dyn_model(ode, mpc_settings_.timestep);
     StageModel stage_model(cost, dyn_model);
 
     for (size_t i = 0; i < 4; i++)
@@ -119,14 +119,14 @@ void MPCSolver::createProblem(const VectorXd &x0, const VectorXd &x_ref_term)
 
 std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const VectorXd &x0,
                                                                          const std::vector<VectorXd> &x_init,
-                                                                         const std::vector<VectorXd> &u_init)
+                                                                         const std::vector<VectorXd> &u_init,
+                                                                         size_t max_iters)
 {
 
     double TOL = 1e-5;
     double mu_init = 1e-8;
     // double TOL = 1e-3;
     // double mu_init = 1e-5;
-    size_t max_iters = 500;
 
     SolverProxDDP solver(TOL, mu_init, max_iters, proxsuite::nlp::VERBOSE);
     solver.rollout_type_ = aligator::RolloutType::LINEAR;
@@ -142,38 +142,4 @@ std::pair<std::vector<VectorXd>, std::vector<VectorXd>> MPCSolver::solve(const V
     std::vector<VectorXd> us = solver.results_.us;
 
     return {xs, us};
-}
-
-void MPCSolver::initCostWeight(const YamlLoader &yaml_loader)
-{
-    // State Cost
-    Eigen::VectorXd w_x_diag(space_.ndx());
-    w_x_diag << yaml_loader.w_x_body_pos,
-        yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos, yaml_loader.w_x_leg_pos,
-        yaml_loader.w_x_arm_pos,
-        yaml_loader.w_x_body_vel,
-        yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel, yaml_loader.w_x_leg_vel,
-        yaml_loader.w_x_arm_vel;
-    mpc_settings_.w_x = w_x_diag.asDiagonal();
-
-    // Control Cost
-    Eigen::VectorXd w_u_diag(nu_);
-    w_u_diag << yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force, yaml_loader.w_u_foot_force,
-        yaml_loader.w_u_arm_force,
-        yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc, yaml_loader.w_u_leg_acc,
-        yaml_loader.w_u_arm_acc;
-    mpc_settings_.w_u = w_u_diag.asDiagonal();
-
-    // Fly High Cost
-    mpc_settings_.w_fly_high = yaml_loader.w_fly_high.asDiagonal();
-    mpc_settings_.fly_high_slope = yaml_loader.fly_high_slope;
-
-    // ZMP Cost
-    mpc_settings_.w_zmp = yaml_loader.w_zmp.asDiagonal();
-
-    // Foot pos Cost
-    mpc_settings_.w_foot_pos = yaml_loader.w_foot_pos.asDiagonal();
-
-    // Arm EE Cost
-    mpc_settings_.w_arm = yaml_loader.w_arm_pos.asDiagonal();
 }

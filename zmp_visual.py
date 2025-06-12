@@ -6,9 +6,9 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.patches import Polygon
 
 # 文件路径
-zmp_pos_csv = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-2/solo_kinodynamics_result_zmp_pos.csv"
-foot_pos_csv = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-2/solo_kinodynamics_result_feet_pos.csv"
-contact_state_csv = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-2/solo_kinodynamics_result_contact_state.csv"
+zmp_pos_csv = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-3/solo_kinodynamics_result_zmp_pos.csv"
+foot_pos_csv = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-3/solo_kinodynamics_result_feet_pos.csv"
+contact_state_csv = "/home/robot/文档/vs_project/Quadruped-Robot/Quadruped-Robot-3/solo_kinodynamics_result_contact_state.csv"
 
 # 读取数据
 zmp_data = pd.read_csv(zmp_pos_csv, header=None).values
