@@ -74,7 +74,7 @@ file(GLOB_RECURSE SRC_LIST
   src/**.cpp
   src/**/**.cpp
 )
-add_executable(QUADRUPED_MPC ${SRC_LIST} src/main.cpp)
+add_executable(QUADRUPED_MPC ${SRC_LIST} src/test1.cpp)
 target_link_libraries(QUADRUPED_MPC pinocchio::pinocchio)
 target_link_libraries(QUADRUPED_MPC aligator::aligator)
 target_link_libraries(QUADRUPED_MPC example-robot-data::example-robot-data)

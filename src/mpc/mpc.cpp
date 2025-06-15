@@ -4,8 +4,6 @@ MPC::MPC(Model model, VectorXd x0, Vector3d f_pull,
     std::vector<SE3> arm_contact_places)
     :space_(model), x0_(x0), f_pull_(f_pull), arm_contact_places_(arm_contact_places)
 {
-    std::cout << "1" << std::endl;
-    std::cout << "2" << std::endl;
     model_ = model; // 复制模型
     data_ = pinocchio::Data(model_);
     x0_init_ = x0; // 记录初始状态（腿关节作为后续参考）
@@ -71,32 +69,27 @@ MPC::MPC(Model model, VectorXd x0, Vector3d f_pull,
     setX_U_ref();  // 设置期望状态和输入
     setX_U_init_0(); // 设置第一次热启动的期望状态和输入
 
-    // for (const auto &id : contact_ids_) {
-    //     std::cout << id << " ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout << "feet_contact_poses_ size: " 
-    //       << feet_contact_poses_.size() << " x " 
-    //       << (feet_contact_poses_.empty() ? 0 : feet_contact_poses_[0].size()) 
-    //       << std::endl;
-
-    // for (size_t t = 0; t < feet_contact_poses_.size(); ++t)
+    // std::cout << "x_ref: " << std::endl;
+    // for (size_t t = 0; t < x_ref_.size(); ++t)
     // {
     //     std::cout << "t = " << t << ": ";
-    //     for (size_t j = 0; j < feet_contact_poses_[t].size(); ++j)
+    //     for (size_t j = 0; j < x_ref_[t].size(); ++j)
     //     {
-    //         const auto &pos = feet_contact_poses_[t][j];
-    //         std::cout << "(" << pos[0] << ", " << pos[1] << ", " << pos[2] << ") ";
+    //         const auto &xr = x_ref_[t][j];
+    //         std::cout << xr << "  ";
     //     }
     //     std::cout << std::endl;
     // }
 
-    // std::cout << "arm_contact_places_ size: " << arm_contact_places_.size() << std::endl;
-    // for (size_t i = 0; i < arm_contact_places_.size(); ++i)
+    // for (size_t t = 0; t < u_ref_.size(); ++t)
     // {
-    // const auto &pose = arm_contact_places_[i];
-    // std::cout << "[" << i << "]: " << pose.translation().transpose() << std::endl;
+    //     std::cout << "t = " << t << ": ";
+    //     for (size_t j = 0; j < u_ref_[t].size(); ++j)
+    //     {
+    //         const auto &ur = u_ref_[t][j];
+    //         std::cout << ur << "  ";
+    //     }
+    //     std::cout << std::endl;
     // }
 
 
@@ -107,6 +100,27 @@ MPC::MPC(Model model, VectorXd x0, Vector3d f_pull,
     //     }
     //     std::cout << std::endl;
     // }
+
+    for (size_t t = 0; t < feet_contact_poses_.size(); ++t)
+    {
+        std::cout << "t = " << t << ": ";
+        for (size_t j = 0; j < feet_contact_poses_[t].size(); ++j)
+        {
+            const auto &pos = feet_contact_poses_[t][j];
+            std::cout << "(" << pos[0] << ", " << pos[1] << ", " << pos[2] << ") ";
+        }
+        std::cout << std::endl;
+    }
+
+    // std::cout << "arm_contact_places_ size: " << arm_contact_places_.size() << std::endl;
+    // for (size_t i = 0; i < arm_contact_places_.size(); ++i)
+    // {
+    // const auto &pose = arm_contact_places_[i];
+    // std::cout << "[" << i << "]: " << pose.translation().transpose() << std::endl;
+    // }
+
+
+
     
     
     mpc_solver_ = std::make_unique<MPCSolver>(
@@ -115,7 +129,6 @@ MPC::MPC(Model model, VectorXd x0, Vector3d f_pull,
         arm_contact_places_, contact_states_, mpc_settings_
     );
     
-    std::cout << "5" << std::endl;
 
     auto result = mpc_solver_->solve(x0_, x_init_, u_init_, 500);
     xs_ = result.first;
@@ -189,6 +202,8 @@ void MPC::updateContactFeetPoses()
     const int T = mpc_settings_.T;
     const int num_legs = contact_ids_.size() - 1; // 不包括机械臂末端
 
+    updatePinocchioInfo(x0_.head(nq_), x0_.tail(nv_)); // 更新Pinocchio信息
+
     for (int leg = 0; leg < num_legs; ++leg)
     {
         bool contact0 = contact_states_[0][leg];
@@ -215,6 +230,9 @@ void MPC::updateContactFeetPoses()
         {
             // 计算当前落足点
             init_pose_ = data_.oMf[contact_ids_[leg]].translation();
+            init_pose_[2] = 0.0; // 保持落足点高度为0
+
+            std::cout << "init_pose: " << init_pose_.transpose() << std::endl;
 
             // 计算下一落足点
             Vector3d foot_pos_ref = data_.oMf[hip_ids_[leg]].translation();

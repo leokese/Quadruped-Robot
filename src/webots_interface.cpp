@@ -47,6 +47,7 @@ void WebotsInterface::recvState(Eigen::VectorXd &state_vector, Eigen::Vector3d &
         last_q_(i) = q(7 + i);
     }
     state_vector << q, v;
+    std::cout << "state_vector: " << state_vector.transpose() << std::endl;
 
     const double *pos = object_node_->getPosition();   // world position [x, y, z]
     const double *vel = object_node_->getVelocity();   // [vx, vy, vz, wx, wy, wz]
