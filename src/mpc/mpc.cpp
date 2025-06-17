@@ -134,13 +134,17 @@ MPC::MPC(Model model, VectorXd x0, Vector3d f_pull,
     xs_ = result.first;
     us_ = result.second;
 
+    as_.resize(mpc_settings_.T);
+
     std::cout << "MPC initialized successfully." << std::endl;
 
 
 }
 
-void MPC::iterate(const ConstVectorRef &x, std::vector<SE3> arm_contact_places, double current_time)
+void MPC::iterate(const ConstVectorRef &x, Vector3d f_pull, std::vector<SE3> arm_contact_places, double current_time)
 {
+    f_pull_ = f_pull; // 更新拉力
+
     // 更新Pinocchio信息
     updatePinocchioInfo(x.head(nq_), x.tail(nv_));
 
@@ -166,9 +170,12 @@ void MPC::iterate(const ConstVectorRef &x, std::vector<SE3> arm_contact_places, 
         x0_, x_ref_, u_ref_, contact_ids_, feet_contact_poses_,
         arm_contact_places_, contact_states_, mpc_settings_
     );
-    auto result = mpc_solver_->solve(x0_, x_init_, u_init_, 500);
+    auto result = mpc_solver_->solve(x0_, x_init_, u_init_, 10);
     xs_ = result.first;
     us_ = result.second;
+
+    computeAccelerationsFromStates(); // 计算as_
+
 }
 
 void MPC::updatePinocchioInfo(const VectorXd &q, const VectorXd &v)
